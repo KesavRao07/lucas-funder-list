@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCA Funder Matcher</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:white;margin:0;padding:40px}
+h1{margin-bottom:10px}
+.container{max-width:1100px;margin:auto;display:grid;grid-template-columns:400px 1fr;gap:30px}
+.card{background:#1e293b;padding:25px;border-radius:10px}
+label{font-size:14px;display:block;margin-top:15px}
+input,select{width:100%;padding:10px;margin-top:5px;border-radius:6px;border:none}
+button{margin-top:20px;width:100%;padding:12px;border:none;border-radius:6px;background:#3b82f6;color:white;font-weight:bold;cursor:pointer}
+button:hover{background:#2563eb}
+.resultCard{background:#0f172a;padding:15px;border-radius:8px;margin-bottom:12px;border:1px solid #334155}
+.good{border-left:5px solid #22c55e}
+.bad{border-left:5px solid #ef4444}
+.small{color:#94a3b8;font-size:13px}
+</style>
+</head>
+<body>
+<h1>MCA Funder Routing Tool</h1>
+<p class="small">Enter merchant info to see which funders match.</p>
+<div class="container">
+<div class="card">
+<h3>Merchant Info</h3>
+<label>Monthly Revenue</label>
+<input id="revenue" type="number">
+<label>Amount Requested</label>
+<input id="amount" type="number">
+<label>Industry</label>
+<select id="industry">
+<option>Retail</option>
+<option>Restaurant</option>
+<option>Construction</option>
+<option>Trucking</option>
+<option>Auto Sales</option>
+<option>Medical</option>
+<option>Professional Services</option>
+<option>Beauty</option>
+<option>Wholesale</option>
+<option>Ecommerce</option>
+<option>Financial Services</option>
+<option>Other</option>
+</select>
+<label>Time In Business (months)</label>
+<input id="tib" type="number">
+<label>Credit Score</label>
+<input id="fico" type="number">
+<label>State</label>
+<input id="state" placeholder="Example: NY">
+<label>Existing Positions</label>
+<input id="positions" type="number">
+<button onclick="runMatch()">Find Funders</button>
+</div>
+<div class="card">
+<h3>Results</h3>
+<div id="results"></div>
+</div>
+</div>
+<script>
+const funders=[
+{
+name:"Aspire Funding Platform",
+minRevenue:10000,
+minTIB:12,
+minFico:0,
+maxPositions:5,
+maxDeal:500000,
+badIndustries:["Gambling","Casino","CBD","Cannabis","Vape"],
+badStates:[],
+emails:["submissions@aspirefundingplatform.com","adam@aspirefundingplatform.com","amoffers@aspirefundingplatform.com","svasquez@aspirefundingplatform.com","kesav@aspirefundingplatform.com","amiz@aspirefundingplatform.com","info@aspirefundingplatform.com","offers@aspirefundingplatform.com","elig@aspirefundingplatform.com","angelo@aspirefundingplatform.com","dflores@aspirefundingplatform.com"],
+term:"Up to 48 Weeks / 240 Days",
+notes:"Restricted industries include gambling, casino, poker, sportsbook, betting, lottery, CBD, cannabis, vape products, firearms, adult entertainment, counterfeit goods, crypto-related activity, and other high-risk categories.",
+commission:"Up to 12 points"
+},
+{
+name:"Everest Business Funding",
+minRevenue:3000,
+minTIB:4,
+minFico:550,
+maxPositions:4,
+maxDeal:500000,
+badIndustries:["Auto Sales","Attorneys"],
+badStates:[],
+emails:["zahria.davis@everestbusinessfunding.com","isosupport@everestbusinessfunding.com","submissions@everestbusinessfunding.com"],
+term:"Typically 4–18 months",
+notes:"Min advance $2,600. Max 10 negative days/month and 10 NSFs/month. Requires 3 months of business bank statements. Restricted industries include financial institutions, auto sales, and attorneys.",
+commission:"Up to 15 points"
+},
+{
+name:"Fratello Capital",
+minRevenue:20000,
+minTIB:6,
+minFico:0,
+maxPositions:6,
+maxDeal:60000,
+badIndustries:["Trucking"],
+badStates:[],
+emails:["Underwriting@fratellocapital.com"],
+term:"12 weeks to 48 weeks depending on product",
+notes:"Funds B–C paper. Allows prior defaults, judgments, and open bankruptcies. Max 5 negative days per month. Most industries accepted except trucking.",
+commission:"Not specified"
+},
+{
+name:"Fox Funding",
+minRevenue:50000,
+minTIB:12,
+minFico:500,
+maxPositions:5,
+maxDeal:1500000,
+badIndustries:["Nonprofit"],
+badStates:[],
+emails:[],
+term:"Up to 12 months",
+notes:"Flexible on rate, term, and structure. Restricted industries include nonprofit/religious organizations, check cashing/money wiring, debt collection/credit repair, and some auto sales and trucking scenarios.",
+commission:"Up to 10 points"
+},
+{
+name:"LiquidBee",
+minRevenue:25000,
+minTIB:9,
+minFico:0,
+maxPositions:4,
+maxDeal:500000,
+badIndustries:[],
+badStates:[],
+emails:["julia@liquidibee.com","newdeals@liquidibee.com"],
+term:"4–6 months",
+notes:"Funds all 50 states. Max 5 negative days. No recent defaults. Construction requires stronger revenue. High-risk trucking possible with stronger revenue.",
+commission:"Up to 12 points"
+},
+{
+name:"SuperFast Capital",
+minRevenue:50000,
+minTIB:12,
+minFico:550,
+maxPositions:4,
+maxDeal:2000000,
+badIndustries:["Trucking","Lawyers"],
+badStates:[],
+emails:["Nicole@superfastcap.com","Lauren@superfastcap.com"],
+term:"Up to 9 months",
+notes:"Restricted industries include nonprofit, trucking, lawyers, property management, CBD, cannabis, and vape shops. Construction requires $250k minimum revenue.",
+commission:"Up to 10 points"
+},
+{
+name:"Torro Funding",
+minRevenue:20000,
+minTIB:6,
+minFico:500,
+maxPositions:10,
+maxDeal:100000,
+badIndustries:["Trucking","Auto Sales"],
+badStates:["NY"],
+emails:["matt.jump@torro.com"],
+term:"2–9 months",
+notes:"FICO 500+. Restricted industries generally include trucking, transportation, financial services, and auto sales. NY restricted.",
+commission:"Sell rate 1.55 for 15k and under, otherwise 1.49"
+}
+];
+
+function copyEmails(emails){
+  const text = emails.join(' ');
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('copyEmailsBtn');
+    if(btn){
+      const original = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(()=>{ btn.textContent = original; }, 1400);
+    }
+  });
+}
+
+function showDetails(name){
+  const funder = funders.find(f=>f.name===name);
+  if(!funder) return;
+  const emailHtml = funder.emails.length
+    ? `<div style="margin-top:10px"><b>Emails:</b><br><div class="small" style="margin-top:6px;line-height:1.7">${funder.emails.join('<br>')}</div><button id="copyEmailsBtn" onclick='copyEmails(${JSON.stringify(funder.emails)})' style="margin-top:12px;width:auto;padding:10px 14px">Copy Emails</button></div>`
+    : `<div style="margin-top:10px" class="small"><b>Emails:</b> Not listed</div>`;
+
+  const modal = document.createElement('div');
+  modal.id = 'funderModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999';
+  modal.innerHTML = `
+    <div style="background:#1e293b;border-radius:12px;max-width:700px;width:100%;padding:24px;position:relative;border:1px solid #334155;max-height:85vh;overflow:auto">
+      <button onclick="document.getElementById('funderModal').remove()" style="position:absolute;top:12px;right:12px;width:auto;margin-top:0;background:#334155;padding:8px 12px">Close</button>
+      <h2 style="margin-top:0">${funder.name}</h2>
+      <div class="small" style="margin-bottom:14px">Full funder details</div>
+      <div style="display:grid;gap:8px;line-height:1.6">
+        <div><b>Minimum Monthly Revenue:</b> $${funder.minRevenue.toLocaleString()}</div>
+        <div><b>Minimum Time in Business:</b> ${funder.minTIB} months</div>
+        <div><b>Minimum Credit Score:</b> ${funder.minFico || 'Not specified'}</div>
+        <div><b>Maximum Positions:</b> ${funder.maxPositions}</div>
+        <div><b>Maximum Deal Size:</b> $${funder.maxDeal.toLocaleString()}</div>
+        <div><b>Restricted States:</b> ${funder.badStates.length ? funder.badStates.join(', ') : 'None listed'}</div>
+        <div><b>Restricted Industries:</b> ${funder.badIndustries.length ? funder.badIndustries.join(', ') : 'None listed'}</div>
+        <div><b>Term:</b> ${funder.term}</div>
+        <div><b>Commission:</b> ${funder.commission}</div>
+        <div><b>Notes:</b> ${funder.notes}</div>
+      </div>
+      ${emailHtml}
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function runMatch(){
+const revenue=parseFloat(document.getElementById("revenue").value);
+const amount=parseFloat(document.getElementById("amount").value);
+const tib=parseFloat(document.getElementById("tib").value);
+const fico=parseFloat(document.getElementById("fico").value);
+const state=document.getElementById("state").value.toUpperCase().trim();
+const positions=parseFloat(document.getElementById("positions").value);
+const industry=document.getElementById("industry").value;
+let results="";
+funders.forEach(f=>{
+let eligible=true;
+let reason="";
+if(revenue<f.minRevenue){eligible=false;reason="Revenue too low"}
+if(tib<f.minTIB){eligible=false;reason="Time in business too low"}
+if(fico<f.minFico){eligible=false;reason="Credit score too low"}
+if(positions>f.maxPositions){eligible=false;reason="Too many positions"}
+if(amount>f.maxDeal){eligible=false;reason="Deal size too large"}
+if(f.badStates.includes(state)){eligible=false;reason="State restricted"}
+if(f.badIndustries.includes(industry)){eligible=false;reason="Industry restricted"}
+if(eligible){
+results+=`<div class='resultCard good'><b><a href="#" onclick="showDetails('${f.name.replace(/'/g,"\'")}'); return false;" style="color:white;text-decoration:none">${f.name}</a></b><div class='small'>Eligible funder — click name for details</div></div>`
+}else{
+results+=`<div class='resultCard bad'><b>${f.name}</b><div class='small'>Not Eligible — ${reason}</div></div>`
+}
+});
+document.getElementById("results").innerHTML=results;
+}
+</script>
+</body>
+</html>
